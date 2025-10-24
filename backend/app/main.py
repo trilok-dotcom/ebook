@@ -24,6 +24,7 @@ from .models import (
 )
 from .notifications import NotificationService
 from .database import DatabaseService
+from .routes import notifications
 
 # Configure logging
 logging.basicConfig(
@@ -95,6 +96,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Request-ID"]
 )
+
+# Include routers
+app.include_router(notifications.router)
 
 
 # Request ID middleware

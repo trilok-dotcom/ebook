@@ -1,0 +1,106 @@
+{
+  "info": {
+    "name": "E-Booklet Notifications API",
+    "description": "API endpoints for sending email and SMS notifications",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Test Notification (No Auth)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"your_email@gmail.com\",\n  \"phone\": \"+1234567890\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/notify/test",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "notify", "test"]
+        },
+        "description": "Test endpoint to verify email and SMS are working. No authentication required."
+      }
+    },
+    {
+      "name": "Send Appointment Notification",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_FIREBASE_ID_TOKEN",
+            "description": "Replace with actual Firebase ID token"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"patient_name\": \"John Doe\",\n  \"patient_email\": \"john@example.com\",\n  \"patient_phone\": \"+1234567890\",\n  \"doctor_name\": \"Dr. Sarah Smith\",\n  \"appointment_date\": \"October 25, 2025\",\n  \"appointment_time\": \"10:00 AM\",\n  \"appointment_reason\": \"Annual Checkup\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/notify/appointment",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "notify", "appointment"]
+        },
+        "description": "Send appointment confirmation via email and SMS"
+      }
+    },
+    {
+      "name": "Send Record Upload Notification",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_FIREBASE_ID_TOKEN",
+            "description": "Replace with actual Firebase ID token"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"patient_name\": \"John Doe\",\n  \"patient_email\": \"john@example.com\",\n  \"patient_phone\": \"+1234567890\",\n  \"doctor_name\": \"Dr. Sarah Smith\",\n  \"record_name\": \"Blood Test Results\",\n  \"record_type\": \"Lab Report\",\n  \"notes\": \"All values are within normal range\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/notify/record",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "notify", "record"]
+        },
+        "description": "Send record upload notification via email and SMS"
+      }
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/healthz",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "healthz"]
+        },
+        "description": "Check if the API is running"
+      }
+    }
+  ]
+}

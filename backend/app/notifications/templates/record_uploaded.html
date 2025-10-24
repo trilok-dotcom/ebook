@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Health Record</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 40px 20px;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            color: white;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .header p {
+            margin: 8px 0 0 0;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .greeting {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a202c;
+            margin: 0 0 20px 0;
+        }
+        
+        .message {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #4a5568;
+            margin: 0 0 30px 0;
+        }
+        
+        .record-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 30px 0;
+            border-left: 4px solid #4facfe;
+        }
+        
+        .record-icon {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.2);
+        }
+        
+        .record-detail {
+            margin: 12px 0;
+            font-size: 15px;
+        }
+        
+        .record-detail .label {
+            font-weight: 600;
+            color: #2d3748;
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .record-detail .value {
+            color: #4a5568;
+            display: block;
+        }
+        
+        .record-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a202c;
+            margin: 16px 0;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            text-decoration: none;
+            padding: 16px 40px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+            transition: transform 0.2s;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.5);
+        }
+        
+        .info-box {
+            background: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .info-box p {
+            margin: 0;
+            font-size: 14px;
+            color: #7c6200;
+        }
+        
+        .footer {
+            background: #f7fafc;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .footer p {
+            margin: 8px 0;
+            font-size: 13px;
+            color: #718096;
+        }
+        
+        .footer a {
+            color: #4facfe;
+            text-decoration: none;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+            margin: 30px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>📄 E-Booklet</h1>
+            <p>Your Health, Simplified</p>
+        </div>
+        
+        <div class="content">
+            <h2 class="greeting">Hi {{ patient_name }},</h2>
+            
+            <p class="message">
+                A new health record has been uploaded to your account by your healthcare provider.
+            </p>
+            
+            <div class="record-card">
+                <div class="record-icon">📋</div>
+                
+                <div class="record-name">{{ record_name }}</div>
+                
+                <div class="record-detail">
+                    <span class="label">📁 Type:</span>
+                    <span class="value">{{ record_type }}</span>
+                </div>
+                
+                <div class="record-detail">
+                    <span class="label">👨‍⚕️ Uploaded by:</span>
+                    <span class="value">{{ doctor_name }}</span>
+                </div>
+                
+                <div class="record-detail">
+                    <span class="label">📅 Date:</span>
+                    <span class="value">{{ upload_date }}</span>
+                </div>
+                
+                {% if notes %}
+                <div class="record-detail">
+                    <span class="label">📝 Notes:</span>
+                    <span class="value">{{ notes }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <center>
+                <a href="{{ dashboard_url }}" class="cta-button">View Record</a>
+            </center>
+            
+            <div class="info-box">
+                <p>
+                    <strong>🔒 Secure & Private:</strong> Your medical records are encrypted and only accessible to you and your authorized healthcare providers.
+                </p>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <p class="message" style="font-size: 14px; margin-bottom: 0;">
+                You can download, view, or share this record anytime from your dashboard. If you have any questions, please contact your healthcare provider.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>E-Booklet</strong> - Secure Medical Records Management</p>
+            <p>© 2025 E-Booklet | <a href="#">Privacy Policy</a> | <a href="#">Unsubscribe</a></p>
+            <p style="margin-top: 16px; font-size: 12px;">
+                This email was sent to {{ patient_email }}
+            </p>
+        </div>
+    </div>
+</body>
+</html>
