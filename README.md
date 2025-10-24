@@ -40,41 +40,51 @@ A secure web application for managing medical records between doctors and patien
 ## Project Structure
 
 ```
-ebooklet/
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── ProtectedRoute.jsx
-│   │   │   └── UploadForm.jsx
-│   │   ├── contexts/
-│   │   │   └── AuthContext.jsx
-│   │   ├── pages/
-│   │   │   ├── Login.jsx
-│   │   │   ├── Onboarding.jsx
-│   │   │   ├── DoctorDashboard.jsx
-│   │   │   └── PatientDashboard.jsx
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   ├── firebase.js
-│   │   └── index.css
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   └── .env.example
-├── backend/
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py
-│   │   ├── config.py
-│   │   ├── auth.py
-│   │   ├── schemas.py
-│   │   └── notify.py
-│   ├── requirements.txt
-│   ├── .env.example
-│   └── README.md
-├── firestore.rules
-├── storage.rules
-└── README.md
+ebook
+├─ backend
+│  ├─ app
+│  │  ├─ auth.py
+│  │  ├─ config.py
+│  │  ├─ database.py
+│  │  ├─ main.py
+│  │  ├─ models.py
+│  │  ├─ notifications
+│  │  │  ├─ providers.py
+│  │  │  └─ service.py
+│  │  ├─ notify.py
+│  │  ├─ schemas.py
+│  │  └─ __init__.py
+│  ├─ README.md
+│  └─ requirements.txt
+├─ firebase.json
+├─ firestore.indexes.json
+├─ firestore.rules
+├─ frontend
+│  ├─ index.html
+│  ├─ package-lock.json
+│  ├─ package.json
+│  ├─ postcss.config.js
+│  ├─ src
+│  │  ├─ App.jsx
+│  │  ├─ components
+│  │  │  ├─ ProtectedRoute.jsx
+│  │  │  └─ UploadForm.jsx
+│  │  ├─ contexts
+│  │  │  └─ AuthContext.jsx
+│  │  ├─ firebase.js
+│  │  ├─ index.css
+│  │  ├─ main.jsx
+│  │  └─ pages
+│  │     ├─ DoctorDashboard.jsx
+│  │     ├─ Login.jsx
+│  │     ├─ Onboarding.jsx
+│  │     └─ PatientDashboard.jsx
+│  ├─ tailwind.config.js
+│  └─ vite.config.js
+├─ README.md
+├─ SETUP_GUIDE.md
+└─ storage.rules
+
 ```
 
 ## Setup Instructions
@@ -478,3 +488,4 @@ MIT
 ## Support
 
 For issues or questions, please open an issue on GitHub.
+
