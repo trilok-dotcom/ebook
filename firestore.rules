@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection - users can only read/write their own document
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false; // No one can delete user documents
+    }
+    
+    // Records collection - doctors can create/update/delete their uploads, 
+    // both doctor and assigned patient can read
+    match /records/{recordId} {
+      // Doctor who uploaded can create
+      allow create: if request.auth != null 
+                    && request.auth.uid == request.resource.data.uploadedBy;
+      
+      // Doctor who uploaded OR assigned patient can read
+      allow read: if request.auth != null && (
+        resource.data.uploadedFor == request.auth.uid ||
+        resource.data.uploadedBy == request.auth.uid
+      );
+      
+      // Only doctor who uploaded can update or delete
+      allow update, delete: if request.auth != null 
+                            && request.auth.uid == resource.data.uploadedBy;
+    }
+  }
+}
