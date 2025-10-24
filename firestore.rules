@@ -2,18 +2,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Users collection - users can only read/write their own document
+    // Helper function to get user role
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    // Users collection
     match /users/{userId} {
+      // Users can read/write their own document
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create: if request.auth != null && request.auth.uid == userId;
       allow update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false; // No one can delete user documents
+      allow delete: if false;
+      
+      // Doctors can read all patient profiles
+      // Patients can read all doctor profiles
+      allow read: if request.auth != null && (
+        (getUserRole() == 'doctor' && resource.data.role == 'patient') ||
+        (getUserRole() == 'patient' && resource.data.role == 'doctor')
+      );
     }
     
     // Records collection - doctors can create/update/delete their uploads, 
     // both doctor and assigned patient can read
     match /records/{recordId} {
-      // Doctor who uploaded can create
+      // Any authenticated user can create records (we trust the uploadedBy field)
       allow create: if request.auth != null 
                     && request.auth.uid == request.resource.data.uploadedBy;
       
@@ -26,6 +39,33 @@ service cloud.firestore {
       // Only doctor who uploaded can update or delete
       allow update, delete: if request.auth != null 
                             && request.auth.uid == resource.data.uploadedBy;
+    }
+    
+    // Appointments collection
+    match /appointments/{appointmentId} {
+      // Patients can create appointments
+      allow create: if request.auth != null 
+                    && request.auth.uid == request.resource.data.patientId
+                    && getUserRole() == 'patient';
+      
+      // Doctor or patient involved can read
+      allow read: if request.auth != null && (
+        resource.data.doctorId == request.auth.uid ||
+        resource.data.patientId == request.auth.uid
+      );
+      
+      // Doctor can update appointment (approve/reject/complete)
+      // Patient can cancel their own appointment
+      allow update: if request.auth != null && (
+        (resource.data.doctorId == request.auth.uid && getUserRole() == 'doctor') ||
+        (resource.data.patientId == request.auth.uid && getUserRole() == 'patient' && 
+         request.resource.data.status == 'cancelled')
+      );
+      
+      // Only patient who created can delete (before approval)
+      allow delete: if request.auth != null 
+                    && request.auth.uid == resource.data.patientId
+                    && resource.data.status == 'pending';
     }
   }
 }

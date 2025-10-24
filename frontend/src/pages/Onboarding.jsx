@@ -9,6 +9,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [role, setRole] = useState('');
   const [phone, setPhone] = useState('');
+  const [specialty, setSpecialty] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -18,16 +19,28 @@ export default function Onboarding() {
       return;
     }
 
+    if (role === 'doctor' && !specialty) {
+      alert('Please enter your specialty');
+      return;
+    }
+
     setLoading(true);
     try {
-      await setDoc(doc(db, 'users', currentUser.uid), {
+      const userData = {
         uid: currentUser.uid,
         email: currentUser.email.toLowerCase().trim(),
         displayName: currentUser.displayName || currentUser.email,
         role: role,
         phone: phone || null,
         createdAt: serverTimestamp(),
-      });
+      };
+
+      // Add specialty for doctors
+      if (role === 'doctor') {
+        userData.specialty = specialty.trim();
+      }
+
+      await setDoc(doc(db, 'users', currentUser.uid), userData);
 
       await refreshProfile();
       navigate(`/${role}`);
@@ -88,6 +101,25 @@ export default function Onboarding() {
             </div>
           </div>
 
+          {role === 'doctor' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Specialty *
+              </label>
+              <input
+                type="text"
+                value={specialty}
+                onChange={(e) => setSpecialty(e.target.value)}
+                placeholder="e.g., General Physician, Cardiologist, Dermatologist"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required={role === 'doctor'}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This helps patients find the right doctor
+              </p>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Phone Number (Optional)
@@ -103,7 +135,7 @@ export default function Onboarding() {
 
           <button
             type="submit"
-            disabled={loading || !role}
+            disabled={loading || !role || (role === 'doctor' && !specialty)}
             className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
           >
             {loading ? 'Creating Profile...' : 'Continue'}
