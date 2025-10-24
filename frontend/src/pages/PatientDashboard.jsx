@@ -76,7 +76,7 @@ export default function PatientDashboard() {
       await updateDoc(recordRef, {
         downloads: arrayUnion({
           uid: currentUser.uid,
-          downloadedAt: serverTimestamp(),
+          downloadedAt: new Date().toISOString(),
         }),
         acknowledged: true,
       });

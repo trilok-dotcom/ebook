@@ -4,6 +4,34 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 
+const MEDICAL_SPECIALTIES = [
+  'General Physician',
+  'Cardiologist',
+  'Dermatologist',
+  'Pediatrician',
+  'Orthopedic Surgeon',
+  'Neurologist',
+  'Psychiatrist',
+  'Gynecologist',
+  'Ophthalmologist',
+  'ENT Specialist',
+  'Dentist',
+  'Radiologist',
+  'Anesthesiologist',
+  'Surgeon',
+  'Urologist',
+  'Gastroenterologist',
+  'Endocrinologist',
+  'Pulmonologist',
+  'Nephrologist',
+  'Oncologist',
+  'Rheumatologist',
+  'Allergist',
+  'Pathologist',
+  'Emergency Medicine',
+  'Family Medicine',
+];
+
 export default function Onboarding() {
   const { currentUser, refreshProfile } = useAuth();
   const navigate = useNavigate();
@@ -11,6 +39,29 @@ export default function Onboarding() {
   const [phone, setPhone] = useState('');
   const [specialty, setSpecialty] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredSpecialties, setFilteredSpecialties] = useState([]);
+
+  const handleSpecialtyChange = (value) => {
+    setSpecialty(value);
+    
+    if (value.trim().length > 0) {
+      const filtered = MEDICAL_SPECIALTIES.filter(spec =>
+        spec.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredSpecialties(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setShowSuggestions(false);
+      setFilteredSpecialties([]);
+    }
+  };
+
+  const handleSelectSpecialty = (selectedSpecialty) => {
+    setSpecialty(selectedSpecialty);
+    setShowSuggestions(false);
+    setFilteredSpecialties([]);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -102,18 +153,48 @@ export default function Onboarding() {
           </div>
 
           {role === 'doctor' && (
-            <div>
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Specialty *
               </label>
               <input
                 type="text"
                 value={specialty}
-                onChange={(e) => setSpecialty(e.target.value)}
-                placeholder="e.g., General Physician, Cardiologist, Dermatologist"
+                onChange={(e) => handleSpecialtyChange(e.target.value)}
+                onFocus={() => {
+                  if (specialty.trim().length > 0) {
+                    const filtered = MEDICAL_SPECIALTIES.filter(spec =>
+                      spec.toLowerCase().includes(specialty.toLowerCase())
+                    );
+                    setFilteredSpecialties(filtered);
+                    setShowSuggestions(filtered.length > 0);
+                  }
+                }}
+                onBlur={() => {
+                  // Delay to allow click on suggestion
+                  setTimeout(() => setShowSuggestions(false), 200);
+                }}
+                placeholder="Start typing... (e.g., Cardio, Derma)"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required={role === 'doctor'}
+                autoComplete="off"
               />
+              
+              {/* Dropdown suggestions */}
+              {showSuggestions && filteredSpecialties.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {filteredSpecialties.map((spec, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleSelectSpecialty(spec)}
+                      className="px-4 py-2 hover:bg-blue-50 cursor-pointer transition"
+                    >
+                      {spec}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
               <p className="text-xs text-gray-500 mt-1">
                 This helps patients find the right doctor
               </p>

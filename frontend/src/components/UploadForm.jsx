@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 
 export default function UploadForm({ onClose, onSuccess }) {
   const { currentUser } = useAuth();
@@ -30,11 +29,17 @@ export default function UploadForm({ onClose, onSuccess }) {
     setUploadProgress(0);
 
     try {
+      console.log('Starting upload process...');
+      console.log('Current user:', currentUser.uid);
+      
       // 1. Find patient by email
       const normalizedEmail = patientEmail.toLowerCase().trim();
+      console.log('Looking for patient:', normalizedEmail);
+      
       const usersRef = collection(db, 'users');
       const q = query(usersRef, where('email', '==', normalizedEmail));
       const snapshot = await getDocs(q);
+      console.log('Patient query completed');
 
       if (snapshot.empty) {
         alert('Patient not found. Please ensure the email is correct and the patient has registered.');
@@ -52,59 +57,75 @@ export default function UploadForm({ onClose, onSuccess }) {
         return;
       }
 
-      // 2. Upload file to Storage
-      const timestamp = Date.now();
-      const storagePath = `records/${currentUser.uid}/${patientUid}/${timestamp}_${file.name}`;
-      const storageRef = ref(storage, storagePath);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      // 2. Upload file to Cloudinary
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'medical_records');
+      formData.append('folder', `records/${currentUser.uid}/${patientUid}`);
 
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+      // Upload to Cloudinary (using raw for documents, will work for images too)
+      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/raw/upload`;
+      
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', cloudinaryUrl, true);
+      
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const progress = (e.loaded / e.total) * 100;
           setUploadProgress(progress);
-        },
-        (error) => {
-          console.error('Upload error:', error);
-          alert('Failed to upload file: ' + error.message);
-          setUploading(false);
-        },
-        async () => {
-          // 3. Get download URL
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-
-          // 4. Create Firestore record
-          await addDoc(collection(db, 'records'), {
-            fileUrl: downloadURL,
-            storagePath: storagePath,
-            fileName: file.name,
-            fileType: fileType,
-            uploadedBy: currentUser.uid,
-            uploadedFor: patientUid,
-            patientEmail: normalizedEmail,
-            notes: notes || '',
-            uploadedAt: serverTimestamp(),
-            acknowledged: false,
-            downloads: [],
-          });
-
-          // 5. Optional: Call backend to notify patient
-          try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL;
-            if (backendUrl) {
-              const idToken = await currentUser.getIdToken();
-              // Note: recordId would need to be returned from addDoc above
-              // For simplicity, skipping notification call here
-              // You can enhance this by getting the doc ID and calling backend
-            }
-          } catch (notifyError) {
-            console.warn('Notification failed:', notifyError);
-          }
-
-          alert('Record uploaded successfully!');
-          onSuccess();
         }
-      );
+      };
+
+      xhr.onload = async () => {
+        if (xhr.status === 200) {
+          const response = JSON.parse(xhr.responseText);
+          const downloadURL = response.secure_url;
+          const publicId = response.public_id;
+          console.log('Cloudinary upload successful:', downloadURL);
+
+          // 3. Create Firestore record
+          console.log('Creating Firestore record...');
+          console.log('uploadedBy:', currentUser.uid);
+          console.log('uploadedFor:', patientUid);
+          
+          try {
+            await addDoc(collection(db, 'records'), {
+              fileUrl: downloadURL,
+              cloudinaryPublicId: publicId,
+              fileName: file.name,
+              fileType: fileType,
+              uploadedBy: currentUser.uid,
+              uploadedFor: patientUid,
+              patientEmail: normalizedEmail,
+              notes: notes || '',
+              uploadedAt: serverTimestamp(),
+              acknowledged: false,
+              downloads: [],
+            });
+            console.log('Firestore record created successfully!');
+
+            alert('Record uploaded successfully!');
+            setUploading(false);
+            onSuccess();
+          } catch (firestoreError) {
+            console.error('Firestore error:', firestoreError);
+            alert('File uploaded but failed to save record: ' + firestoreError.message);
+            setUploading(false);
+          }
+        } else {
+          console.error('Upload error:', xhr.responseText);
+          alert('Failed to upload file');
+          setUploading(false);
+        }
+      };
+
+      xhr.onerror = () => {
+        console.error('Upload error');
+        alert('Failed to upload file');
+        setUploading(false);
+      };
+
+      xhr.send(formData);
     } catch (error) {
       console.error('Error uploading record:', error);
       alert('Failed to upload record: ' + error.message);

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { collection, query, where, orderBy, getDocs, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 import UploadForm from '../components/UploadForm';
 
 export default function DoctorDashboard() {
@@ -71,11 +70,7 @@ export default function DoctorDashboard() {
     if (!confirm('Are you sure you want to delete this record?')) return;
 
     try {
-      // Delete from Storage
-      const storageRef = ref(storage, record.storagePath);
-      await deleteObject(storageRef);
-
-      // Delete from Firestore
+      // Delete from Firestore (Cloudinary files remain accessible via URL)
       await deleteDoc(doc(db, 'records', record.id));
 
       alert('Record deleted successfully');

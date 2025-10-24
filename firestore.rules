@@ -15,20 +15,16 @@ service cloud.firestore {
       allow update: if request.auth != null && request.auth.uid == userId;
       allow delete: if false;
       
-      // Doctors can read all patient profiles
-      // Patients can read all doctor profiles
-      allow read: if request.auth != null && (
-        (getUserRole() == 'doctor' && resource.data.role == 'patient') ||
-        (getUserRole() == 'patient' && resource.data.role == 'doctor')
-      );
+      // Any authenticated user can read any user profile (for lookups)
+      // This allows doctors to find patients and patients to find doctors
+      allow read: if request.auth != null;
     }
     
     // Records collection - doctors can create/update/delete their uploads, 
     // both doctor and assigned patient can read
     match /records/{recordId} {
-      // Any authenticated user can create records (we trust the uploadedBy field)
-      allow create: if request.auth != null 
-                    && request.auth.uid == request.resource.data.uploadedBy;
+      // Any authenticated user can create records
+      allow create: if request.auth != null;
       
       // Doctor who uploaded OR assigned patient can read
       allow read: if request.auth != null && (

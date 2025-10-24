@@ -3,5 +3,8 @@ uvicorn[standard]==0.29.0
 firebase-admin==6.5.0
 python-dotenv==1.0.1
 pydantic==2.7.0
+pydantic-settings==2.11.0
 sendgrid==6.11.0
 twilio==9.0.5
+tenacity==9.1.2
+slowapi==0.1.9

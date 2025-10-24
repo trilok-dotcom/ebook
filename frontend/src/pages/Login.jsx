@@ -3,23 +3,37 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
-  const { signInWithGoogle, currentUser, userProfile } = useAuth();
+  const { signInWithGoogle, currentUser, userProfile, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Don't navigate while still loading
+    if (loading) {
+      console.log('Still loading, waiting...');
+      return;
+    }
+
     if (currentUser) {
+      console.log('Current user exists, checking profile...');
+      console.log('User profile:', userProfile);
+      
       if (userProfile && userProfile.role) {
+        console.log('Navigating to:', `/${userProfile.role}`);
         navigate(`/${userProfile.role}`);
       } else {
+        console.log('No profile or role, navigating to onboarding');
         navigate('/onboarding');
       }
     }
-  }, [currentUser, userProfile, navigate]);
+  }, [currentUser, userProfile, loading, navigate]);
 
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
+      console.log('Sign in successful, waiting for profile to load...');
+      // Navigation will be handled by ProtectedRoute after profile loads
     } catch (error) {
+      console.error('Sign in error:', error);
       alert('Failed to sign in: ' + error.message);
     }
   };
@@ -29,7 +43,7 @@ export default function Login() {
       <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Doctor-Patient Management
+            E-Booklet
           </h1>
           <p className="text-gray-600">Secure medical records sharing</p>
         </div>

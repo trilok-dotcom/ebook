@@ -14,19 +14,44 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
+      console.log('Auth state changed:', user ? user.uid : 'no user');
+      
       if (user) {
-        // Fetch user profile from Firestore
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          setUserProfile(userDoc.data());
-        } else {
+        try {
+          // Fetch user profile from Firestore
+          console.log('Fetching profile for user:', user.uid);
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          
+          console.log('Document exists:', userDoc.exists());
+          
+          if (userDoc.exists()) {
+            const profileData = userDoc.data();
+            console.log('Profile data loaded:', JSON.stringify(profileData, null, 2));
+            console.log('Role:', profileData.role);
+            
+            // Set both user and profile together
+            setCurrentUser(user);
+            setUserProfile(profileData);
+          } else {
+            console.log('❌ No profile document found, user needs onboarding');
+            setCurrentUser(user);
+            setUserProfile(null);
+          }
+        } catch (error) {
+          console.error('❌ Error fetching user profile:', error);
+          console.error('Error details:', error.code, error.message);
+          setCurrentUser(user);
           setUserProfile(null);
         }
       } else {
+        console.log('No user signed in');
+        setCurrentUser(null);
         setUserProfile(null);
       }
+      
       setLoading(false);
+      console.log('Loading complete');
     });
 
     return unsubscribe;
