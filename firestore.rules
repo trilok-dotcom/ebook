@@ -32,9 +32,16 @@ service cloud.firestore {
         resource.data.uploadedBy == request.auth.uid
       );
       
-      // Only doctor who uploaded can update or delete
+      // Doctor who uploaded can update or delete anything
       allow update, delete: if request.auth != null 
                             && request.auth.uid == resource.data.uploadedBy;
+      
+      // Patient can update ONLY acknowledged and downloads fields for their own records
+      allow update: if request.auth != null 
+                    && request.auth.uid == resource.data.uploadedFor
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledged', 'downloads'])
+                    && request.resource.data.uploadedFor == resource.data.uploadedFor
+                    && request.resource.data.uploadedBy == resource.data.uploadedBy;
     }
     
     // Appointments collection
@@ -50,6 +57,9 @@ service cloud.firestore {
         resource.data.patientId == request.auth.uid
       );
       
+      // Allow list queries for checking booked slots
+      allow list: if request.auth != null;
+      
       // Doctor can update appointment (approve/reject/complete)
       // Patient can cancel their own appointment
       allow update: if request.auth != null && (
@@ -62,6 +72,21 @@ service cloud.firestore {
       allow delete: if request.auth != null 
                     && request.auth.uid == resource.data.patientId
                     && resource.data.status == 'pending';
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Any authenticated user can create notifications (for system notifications)
+      allow create: if request.auth != null;
+      
+      // Users can read their own notifications
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // Users can delete their own notifications
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
   }
 }

@@ -25,6 +25,7 @@ export default function PatientDashboard() {
       );
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      console.log('📚 Loaded records:', data.length, 'Unread:', data.filter(r => !r.acknowledged).length);
       setRecords(data);
     } catch (error) {
       console.error('Error loading records:', error);
@@ -68,6 +69,8 @@ export default function PatientDashboard() {
 
   const handleDownload = async (record) => {
     try {
+      console.log('📥 Viewing record:', record.id, 'Current acknowledged:', record.acknowledged);
+      
       // Open file in new tab
       window.open(record.fileUrl, '_blank');
 
@@ -81,10 +84,18 @@ export default function PatientDashboard() {
         acknowledged: true,
       });
 
-      // Refresh records to show updated status
-      loadRecords();
+      console.log('✅ Firestore updated, now updating local state');
+      
+      // Update local state immediately to reflect the change
+      setRecords(prevRecords => {
+        const updated = prevRecords.map(r => 
+          r.id === record.id ? { ...r, acknowledged: true } : r
+        );
+        console.log('📊 Unread count after update:', updated.filter(r => !r.acknowledged).length);
+        return updated;
+      });
     } catch (error) {
-      console.error('Error tracking download:', error);
+      console.error('❌ Error tracking download:', error);
       // Still allow download even if tracking fails
     }
   };
@@ -95,24 +106,70 @@ export default function PatientDashboard() {
       : records.filter((r) => r.fileType === filterType);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Patient Dashboard</h1>
-            <p className="text-sm text-gray-600">Welcome, {userProfile?.displayName}</p>
+      <header className="bg-white shadow-md border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">E-Booklet</h1>
+              <p className="text-sm text-gray-600 mt-1">🧑‍💼 {userProfile?.displayName}</p>
+            </div>
+            <button
+              onClick={signOut}
+              className="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-md hover:shadow-lg"
+            >
+              Sign Out
+            </button>
           </div>
-          <button
-            onClick={signOut}
-            className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            Sign Out
-          </button>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">My Records</p>
+                <p className="text-3xl font-bold text-purple-600 mt-2">{records.length}</p>
+              </div>
+              <div className="bg-purple-100 p-4 rounded-full">
+                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Appointments</p>
+                <p className="text-3xl font-bold text-blue-600 mt-2">{appointments.length}</p>
+              </div>
+              <div className="bg-blue-100 p-4 rounded-full">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Unread Records</p>
+                <p className="text-3xl font-bold text-pink-600 mt-2">{records.filter(r => !r.acknowledged).length}</p>
+              </div>
+              <div className="bg-pink-100 p-4 rounded-full">
+                <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
         {/* Tabs */}
         <div className="mb-6 border-b border-gray-200">
           <nav className="flex space-x-8">

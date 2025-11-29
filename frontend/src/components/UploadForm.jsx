@@ -104,6 +104,34 @@ export default function UploadForm({ onClose, onSuccess }) {
             });
             console.log('Firestore record created successfully!');
 
+            // Send notification to patient
+            try {
+              const token = await currentUser.getIdToken();
+              const doctorProfile = await getDocs(query(collection(db, 'users'), where('uid', '==', currentUser.uid)));
+              const doctorData = doctorProfile.docs[0]?.data();
+              
+              await fetch('http://localhost:8000/api/notify/record', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  patient_name: patientData.displayName || patientData.email,
+                  patient_email: patientData.email,
+                  patient_phone: patientData.phone || null,
+                  doctor_name: doctorData?.displayName || currentUser.email,
+                  record_name: file.name,
+                  record_type: fileType.charAt(0).toUpperCase() + fileType.slice(1),
+                  notes: notes || null
+                })
+              });
+              console.log('Notification sent successfully!');
+            } catch (notifError) {
+              console.error('Failed to send notification:', notifError);
+              // Don't fail the upload if notification fails
+            }
+
             alert('Record uploaded successfully!');
             setUploading(false);
             onSuccess();

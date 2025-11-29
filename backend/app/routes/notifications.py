@@ -11,14 +11,11 @@ import logging
 from pathlib import Path
 
 from ..notifications import NotificationService
-from ..auth import verify_firebase_token
+from ..auth import verify_bearer
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/notify", tags=["notifications"])
-
-# Initialize notification service
-notification_service = NotificationService()
 
 
 class AppointmentNotificationRequest(BaseModel):
@@ -43,10 +40,16 @@ class RecordNotificationRequest(BaseModel):
     notes: Optional[str] = None
 
 
+class TestNotificationRequest(BaseModel):
+    """Request model for test notifications"""
+    email: EmailStr
+    phone: Optional[str] = None
+
+
 @router.post("/appointment")
 async def send_appointment_notification(
     request: AppointmentNotificationRequest,
-    user_id: str = Depends(verify_firebase_token)
+    user: dict = Depends(verify_bearer)
 ):
     """
     Send appointment confirmation via email and SMS
@@ -60,6 +63,11 @@ async def send_appointment_notification(
     """
     try:
         logger.info(f"Sending appointment notification to {request.patient_email}")
+        
+        # Initialize notification service
+        from firebase_admin import firestore
+        db = firestore.client()
+        notification_service = NotificationService(db)
         
         # Prepare email template data
         template_data = {
@@ -126,7 +134,7 @@ async def send_appointment_notification(
 @router.post("/record")
 async def send_record_notification(
     request: RecordNotificationRequest,
-    user_id: str = Depends(verify_firebase_token)
+    user: dict = Depends(verify_bearer)
 ):
     """
     Send record upload notification via email and SMS
@@ -140,6 +148,11 @@ async def send_record_notification(
     """
     try:
         logger.info(f"Sending record notification to {request.patient_email}")
+        
+        # Initialize notification service
+        from firebase_admin import firestore
+        db = firestore.client()
+        notification_service = NotificationService(db)
         
         # Prepare email template data
         template_data = {
@@ -206,38 +219,42 @@ async def send_record_notification(
 
 @router.post("/test")
 async def test_notification(
-    email: EmailStr,
-    phone: Optional[str] = None
+    request: TestNotificationRequest
 ):
     """
     Test endpoint to verify notification service is working
     Does not require authentication
     """
     try:
+        # Initialize notification service
+        from firebase_admin import firestore
+        db = firestore.client()
+        notification_service = NotificationService(db)
+        
         # Send test email
         template_path = Path(__file__).parent.parent / "notifications" / "templates" / "general_notification.html"
         with open(template_path, 'r', encoding='utf-8') as f:
             html_template = f.read()
         
         html_body = html_template.replace("{{ patient_name }}", "Test User")
-        html_body = html_body.replace("{{ patient_email }}", email)
+        html_body = html_body.replace("{{ patient_email }}", request.email)
         html_body = html_body.replace("{{ message_body }}", 
             "This is a test notification from E-Booklet. If you received this, your notification system is working correctly!")
         html_body = html_body.replace("{% if cta_url %}", "")
         html_body = html_body.replace("{% endif %}", "")
         
         email_result = await notification_service.send_email(
-            to_email=email,
+            to_email=request.email,
             subject="Test Notification from E-Booklet ✨",
             html_body=html_body,
             patient_name="Test User"
         )
         
         sms_result = {"success": False, "message": "Phone number not provided"}
-        if phone:
+        if request.phone:
             sms_result = await notification_service.send_sms(
-                to_phone=phone,
-                message="Test notification from E-Booklet. Your SMS service is working!",
+                to_phone=request.phone,
+                message="Appointment is booked successfully. - E-Booklet",
                 patient_name="Test User"
             )
         

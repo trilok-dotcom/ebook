@@ -24,7 +24,7 @@ from .models import (
 )
 from .notifications import NotificationService
 from .database import DatabaseService
-from .routes import notifications
+from .routes import notifications, appointments
 
 # Configure logging
 logging.basicConfig(
@@ -99,6 +99,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(notifications.router)
+app.include_router(appointments.router)
 
 
 # Request ID middleware

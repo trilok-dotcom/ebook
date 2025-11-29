@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { X, Calendar, Clock } from 'lucide-react';
@@ -10,6 +10,69 @@ export default function BookAppointmentModal({ doctor, onClose, onSuccess }) {
   const [time, setTime] = useState('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  // Generate time slots from 8:30 AM to 5:00 PM (30-minute intervals)
+  const generateTimeSlots = () => {
+    const slots = [];
+    let hour = 8;
+    let minute = 30;
+    
+    while (hour < 17 || (hour === 17 && minute === 0)) {
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour > 12 ? hour - 12 : hour;
+      const timeString = `${displayHour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+      const valueString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      
+      slots.push({ display: timeString, value: valueString });
+      
+      // Increment by 30 minutes
+      minute += 30;
+      if (minute >= 60) {
+        minute = 0;
+        hour += 1;
+      }
+    }
+    
+    return slots;
+  };
+
+  const timeSlots = generateTimeSlots();
+
+  // Fetch booked appointments when date is selected
+  useEffect(() => {
+    const fetchBookedSlots = async () => {
+      if (!date || !doctor.id) return;
+      
+      setLoadingSlots(true);
+      try {
+        const q = query(
+          collection(db, 'appointments'),
+          where('doctorId', '==', doctor.id),
+          where('date', '==', date),
+          where('status', 'in', ['pending', 'approved']) // Only consider active appointments
+        );
+        
+        const snapshot = await getDocs(q);
+        const slots = snapshot.docs.map(doc => doc.data().time);
+        setBookedSlots(slots);
+        console.log('📅 Booked slots for', date, ':', slots);
+      } catch (error) {
+        console.error('Error fetching booked slots:', error);
+        setBookedSlots([]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    fetchBookedSlots();
+  }, [date, doctor.id]);
+
+  // Check if a time slot is available
+  const isSlotAvailable = (slotValue) => {
+    return !bookedSlots.includes(slotValue);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,8 +82,34 @@ export default function BookAppointmentModal({ doctor, onClose, onSuccess }) {
       return;
     }
 
+    // Double-check slot availability before booking (prevent race conditions)
+    if (!isSlotAvailable(time)) {
+      alert('Sorry, this time slot was just booked by another patient. Please select a different time.');
+      return;
+    }
+
     setLoading(true);
     try {
+      // Final check: verify slot is still available
+      const checkQuery = query(
+        collection(db, 'appointments'),
+        where('doctorId', '==', doctor.id),
+        where('date', '==', date),
+        where('time', '==', time),
+        where('status', 'in', ['pending', 'approved'])
+      );
+      const checkSnapshot = await getDocs(checkQuery);
+      
+      if (!checkSnapshot.empty) {
+        alert('Sorry, this time slot was just booked. Please select a different time.');
+        setLoading(false);
+        // Refresh booked slots
+        const slots = checkSnapshot.docs.map(doc => doc.data().time);
+        setBookedSlots(slots);
+        setTime('');
+        return;
+      }
+
       await addDoc(collection(db, 'appointments'), {
         doctorId: doctor.id,
         doctorName: doctor.displayName,
@@ -36,6 +125,52 @@ export default function BookAppointmentModal({ doctor, onClose, onSuccess }) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+
+      // Send notification to patient
+      try {
+        const token = await currentUser.getIdToken();
+        
+        // Get patient phone from Firestore
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        const userData = userDocSnap.exists() ? userDocSnap.data() : null;
+        
+        // Format date for notification
+        const dateObj = new Date(date);
+        const formattedDate = dateObj.toLocaleDateString('en-US', { 
+          month: 'long', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+        
+        // Format time (convert 24h to 12h format)
+        const [hours, minutes] = time.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        const formattedTime = `${hour12}:${minutes} ${ampm}`;
+        
+        await fetch('http://localhost:8000/api/notify/appointment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            patient_name: currentUser.displayName || currentUser.email,
+            patient_email: currentUser.email,
+            patient_phone: userData?.phone || null,
+            doctor_name: doctor.displayName,
+            appointment_date: formattedDate,
+            appointment_time: formattedTime,
+            appointment_reason: reason || null
+          })
+        });
+        console.log('Appointment notification sent successfully!');
+      } catch (notifError) {
+        console.error('Failed to send notification:', notifError);
+        // Don't fail the booking if notification fails
+      }
 
       alert('Appointment request sent successfully!');
       onSuccess();
@@ -93,14 +228,34 @@ export default function BookAppointmentModal({ doctor, onClose, onSuccess }) {
               <Clock className="w-4 h-4 inline mr-1" />
               Preferred Time *
             </label>
-            <input
-              type="time"
+            <select
               value={time}
               onChange={(e) => setTime(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={loading}
-            />
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              disabled={loading || loadingSlots || !date}
+            >
+              <option value="">
+                {!date ? 'Please select a date first' : loadingSlots ? 'Loading available slots...' : 'Select a time slot'}
+              </option>
+              {timeSlots.map((slot) => {
+                const available = isSlotAvailable(slot.value);
+                return (
+                  <option 
+                    key={slot.value} 
+                    value={slot.value}
+                    disabled={!available}
+                  >
+                    {slot.display} {!available ? '(Booked)' : ''}
+                  </option>
+                );
+              })}
+            </select>
+            {date && !loadingSlots && bookedSlots.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {bookedSlots.length} slot{bookedSlots.length > 1 ? 's' : ''} already booked for this date
+              </p>
+            )}
           </div>
 
           <div>

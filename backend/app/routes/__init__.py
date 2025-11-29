@@ -2,6 +2,6 @@
 Routes package for E-Booklet API
 """
 
-from . import notifications
+from . import notifications, appointments
 
-__all__ = ["notifications"]
+__all__ = ["notifications", "appointments"]

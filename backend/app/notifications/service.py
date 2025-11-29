@@ -382,3 +382,68 @@ View at: {settings.BASE_APP_URL}/patient
             return dt.strftime("%B %d, %Y at %I:%M %p")
         except:
             return "Recently"
+    
+    async def send_email(
+        self,
+        to_email: str,
+        subject: str,
+        html_body: str,
+        patient_name: str = "User"
+    ) -> Dict[str, Any]:
+        """
+        Send a simple email notification
+        
+        Args:
+            to_email: Recipient email address
+            subject: Email subject
+            html_body: HTML email body
+            patient_name: Patient name for logging
+            
+        Returns:
+            Dict with success status and message
+        """
+        try:
+            result = await self.email_provider.send_email(
+                to_email=to_email,
+                subject=subject,
+                html_body=html_body,
+                from_name="E-Booklet"
+            )
+            return {"success": True, "message": "Email sent successfully"}
+        except Exception as e:
+            logger.error(f"Failed to send email to {to_email}: {str(e)}")
+            return {"success": False, "message": str(e)}
+    
+    async def send_sms(
+        self,
+        to_phone: str,
+        message: str,
+        patient_name: str = "User"
+    ) -> Dict[str, Any]:
+        """
+        Send a simple SMS notification
+        
+        Args:
+            to_phone: Recipient phone number
+            message: SMS message text
+            patient_name: Patient name for logging
+            
+        Returns:
+            Dict with success status and message
+        """
+        if not self.sms_provider:
+            return {"success": False, "message": "SMS not configured. Please set TWILIO credentials in .env"}
+        
+        try:
+            result = await self.sms_provider.send(
+                to=to_phone,
+                subject="Notification",
+                body=message
+            )
+            if result.get("success"):
+                return {"success": True, "message": "SMS sent successfully"}
+            else:
+                return {"success": False, "message": result.get("error", "SMS send failed")}
+        except Exception as e:
+            logger.error(f"Failed to send SMS to {to_phone}: {str(e)}")
+            return {"success": False, "message": str(e)}
